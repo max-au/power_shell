@@ -25,6 +25,7 @@
     undef_local/0, undef_local/1,
     recursive/0, recursive/1,
     undef_nested/0, undef_nested/1,
+    eval_call_undef/0, eval_call_undef/1,
     bad_match/0, bad_match/1,
     function_clause/0, function_clause/1,
     preloaded/0, preloaded/1,
@@ -57,7 +58,7 @@ suite() ->
     [{timetrap,{seconds,30}}].
 
 test_cases() ->
-    [echo, self_echo, preloaded, second_clause, undef, undef_local, undef_nested, recursive,
+    [echo, self_echo, preloaded, second_clause, undef, undef_local, undef_nested, eval_call_undef, recursive,
         calling_local, throwing, bad_match, function_clause, remote_callback,
         callback_local, callback_local_fun_obj, callback_local_make_fun,
         remote_callback_exported, record, try_side_effect, rebind_var, external_fun, catch_apply].
@@ -215,6 +216,10 @@ remote_cb_exported(N) ->
 remote_cb_exported_init(List) ->
     lists:filter(fun ?MODULE:remote_cb_exported/1, List).
 
+%% #2 - confusing error message when eval'ed function calls an undefined function
+eval_call_undef_internal() ->
+    lists:map(fun (_A) -> no_mod:no_fun() end, [1]).
+
 %% Kitchen sink to silence compiler in a good way (without suppressing warnings)
 export_all() ->
     local_undef_nested(atom),
@@ -224,7 +229,8 @@ export_all() ->
     rebind([]),
     external_filter([]),
     throw_applied(),
-    try_side({1, 1}).
+    try_side({1, 1}),
+    eval_call_undef_internal().
 
 -record(rec, {first= "1", second, third = initial}).
 create_record() ->
@@ -302,6 +308,12 @@ undef_nested() ->
 
 undef_nested(_Config) ->
     exception_check(fun local_undef_nested/1, local_undef_nested, [atom]).
+
+eval_call_undef() ->
+    [{doc, "Test that exception caught while evaluating an unnamed function is correct"}].
+
+eval_call_undef(Config) when is_list(Config) ->
+    exception_check(fun eval_call_undef_internal/0, eval_call_undef_internal, []).
 
 preloaded() ->
     [{doc, "Ensure that functions from preloaded modules are just applied"}].
